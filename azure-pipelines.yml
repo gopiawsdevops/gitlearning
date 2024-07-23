@@ -1,0 +1,43 @@
+name: apk-$(build.buildid)
+trigger: none
+pool:
+  name: 'Azure Pipelines'
+variables:
+  ANDROID_HOME: /usr/local/android-sdk
+  NODEJS_VERSION: '20.x'
+stages:
+  - stage: Build
+    jobs:
+      - job: Build
+        steps:
+          - task: JavaToolInstaller@0
+            inputs:
+              versionSpec: '17'
+              jdkArchitectureOption: 'x64'
+              jdkSourceOption: 'PreInstalled'
+            displayName: 'Set up JDK 17'
+          - script: |
+              java -version
+              javac -version
+            displayName: 'Verify Java version'
+          - script: |
+              export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
+              echo "JAVA_HOME is set to $JAVA_HOME"
+            displayName: 'Set JAVA_HOME environment variable'
+          - task: NodeTool@0
+            inputs:
+              versionSpec: $(NODEJS_VERSION)
+            displayName: 'Install Node.js'
+          - script: |
+              npm install
+              npm install -g react-native-cli
+            displayName: 'Install Dependencies'      
+          - script: |
+              cd android
+              sudo chmod +x gradlew
+              ./gradlew clean
+              ./gradlew assembleRelease
+            displayName: 'Build Android App with Gradle'
+          - publish: android/app/build/outputs/apk/release/
+            artifact: app-release
+            displayName: 'Publish Android App'
